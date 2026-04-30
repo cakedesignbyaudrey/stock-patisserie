@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Pâtisserie</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+    .topbar { background: #fff; border-bottom: 1px solid #e5e5e5; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    .topbar-title { font-size: 17px; font-weight: 600; }
+    .topbar-sub { font-size: 12px; color: #888; margin-top: 1px; display: flex; align-items: center; gap: 6px; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; display: inline-block; }
+    .sync-dot.syncing { background: #f59e0b; }
+    .sync-dot.error { background: #ef4444; }
+    .topbar-actions { display: flex; gap: 8px; }
+    .btn { padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid #e5e5e5; background: #fff; color: #1a1a1a; transition: background 0.15s; }
+    .btn:hover { background: #f5f5f5; }
+    .btn.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    .btn.primary:hover { background: #333; }
+    .container { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+    .stat { background: #fff; border-radius: 10px; padding: 14px 16px; border: 1px solid #e5e5e5; }
+    .stat-label { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-val { font-size: 24px; font-weight: 600; }
+    .stat-val.ok { color: #16a34a; }
+    .stat-val.warn { color: #d97706; }
+    .stat-val.out { color: #dc2626; }
+    .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+    .filter-btn { padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid #e5e5e5; background: #fff; color: #666; cursor: pointer; }
+    .filter-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    .search { margin-left: auto; }
+    .search input { padding: 6px 12px; border-radius: 20px; border: 1px solid #e5e5e5; font-size: 13px; background: #fff; width: 180px; }
+    .section-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .plaques-wrap { background: #fff; border-radius: 12px; border: 1px solid #e5e5e5; padding: 16px; margin-bottom: 16px; }
+    .plaques-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .plaque { border: 1px solid #e5e5e5; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 76px; background: #fafafa; }
+    .plaque.ok { border-top: 3px solid #22c55e; }
+    .plaque.low { border-top: 3px solid #f59e0b; }
+    .plaque.out { border-top: 3px solid #ef4444; }
+    .plaque-size { font-size: 13px; font-weight: 600; }
+    .plaque-ctrl { display: flex; align-items: center; gap: 4px; }
+    .ctrl-btn { width: 24px; height: 24px; border-radius: 6px; border: 1px solid #e5e5e5; background: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+    .ctrl-btn:hover { background: #f0f0f0; }
+    .ctrl-val { font-size: 14px; font-weight: 600; min-width: 22px; text-align: center; }
+    .badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500; }
+    .badge.ok { background: #dcfce7; color: #15803d; }
+    .badge.low { background: #fef3c7; color: #92400e; }
+    .badge.out { background: #fee2e2; color: #991b1b; }
+    .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; }
+    .card { background: #fff; border-radius: 12px; border: 1px solid #e5e5e5; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .card.ok { border-left: 3px solid #22c55e; }
+    .card.low { border-left: 3px solid #f59e0b; }
+    .card.out { border-left: 3px solid #ef4444; }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-name { font-size: 14px; font-weight: 600; }
+    .card-cat { font-size: 11px; color: #888; background: #f5f5f5; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+    .card-ctrl { display: flex; align-items: center; gap: 8px; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 8px; border: 1px solid #e5e5e5; background: #f5f5f5; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+    .qty-btn:hover { background: #e5e5e5; }
+    .qty-val { font-size: 17px; font-weight: 600; min-width: 30px; text-align: center; }
+    .unit-label { font-size: 12px; color: #888; }
+    .card-note { display: flex; gap: 6px; }
+    .note-input { flex: 1; font-size: 12px; padding: 4px 8px; border: 1px solid #e5e5e5; border-radius: 6px; background: #fafafa; color: #666; }
+    .del-btn { font-size: 11px; padding: 3px 8px; border: 1px solid #e5e5e5; border-radius: 6px; background: #fff; color: #999; cursor: pointer; }
+    .del-btn:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+    .add-form { background: #fff; border-radius: 12px; border: 1px solid #e5e5e5; padding: 14px 16px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .add-form input, .add-form select { padding: 6px 10px; border-radius: 8px; border: 1px solid #e5e5e5; font-size: 13px; }
+    .add-form input { width: 150px; }
+    .add-form select { width: 130px; }
+    .empty { text-align: center; padding: 2rem; color: #888; font-size: 14px; grid-column: 1/-1; }
+    .error-bar { background: #fee2e2; color: #991b1b; padding: 10px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .topbar-title { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Stock Pâtisserie</div>
+    <div class="topbar-sub">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-status">Connexion...</span>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn" onclick="fetchData()">Actualiser</button>
+    <button class="btn primary" onclick="toggleAdd()">+ Ajouter</button>
+  </div>
+</div>
+
+<div class="container">
+  <div id="error-bar" class="error-bar" style="display:none;"></div>
+
+  <div id="add-form-wrap" style="display:none;">
+    <div class="add-form">
+      <input id="new-name" placeholder="Nom du produit" />
+      <input id="new-unit" placeholder="Unité (kg, L, pcs...)" />
+      <input id="new-qty" type="number" placeholder="Quantité" min="0" style="width:100px;" />
+      <select id="new-cat">
+        <option value="Bases">Bases</option>
+        <option value="Fruits">Fruits</option>
+        <option value="Garnitures">Garnitures</option>
+        <option value="Décoration">Décoration</option>
+        <option value="Matériel">Matériel</option>
+      </select>
+      <button class="btn primary" onclick="addItem()">Ajouter</button>
+      <button class="btn" onclick="toggleAdd()">Annuler</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-val" id="s-total">—</div></div>
+    <div class="stat"><div class="stat-label">En stock</div><div class="stat-val ok" id="s-ok">—</div></div>
+    <div class="stat"><div class="stat-label">Stock faible</div><div class="stat-val warn" id="s-low">—</div></div>
+    <div class="stat"><div class="stat-label">Rupture</div><div class="stat-val out" id="s-out">—</div></div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('all',this)">Tout</button>
+    <button class="filter-btn" onclick="setFilter('ok',this)">En stock</button>
+    <button class="filter-btn" onclick="setFilter('low',this)">Stock faible</button>
+    <button class="filter-btn" onclick="setFilter('out',this)">Rupture</button>
+    <button class="filter-btn" onclick="setFilter('Bases',this)">Bases</button>
+    <button class="filter-btn" onclick="setFilter('Fruits',this)">Fruits</button>
+    <button class="filter-btn" onclick="setFilter('Garnitures',this)">Garnitures</button>
+    <button class="filter-btn" onclick="setFilter('Décoration',this)">Décoration</button>
+    <button class="filter-btn" onclick="setFilter('Matériel',this)">Matériel</button>
+    <div class="search"><input type="text" placeholder="Rechercher..." oninput="setSearch(this.value)" /></div>
+  </div>
+
+  <div class="plaques-wrap">
+    <div class="section-title">Plaques gâteau 12mm</div>
+    <div class="plaques-grid" id="plaques-grid"><span style="font-size:13px;color:#888;">Chargement...</span></div>
+  </div>
+
+  <div class="items-grid" id="items-grid"><div class="empty">Chargement du stock...</div></div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxdrAsYOpDRKNZC-8NR104PcsKEPr_0EMzyOKj-1-A3h_bnQDtJW09ZXqhvS89NHWp6/exec';
+const PLAQUES_SIZES = ['10cm','15cm','20cm','25cm','30cm','35cm'];
+
+let items = [], plaques = {}, currentFilter = 'all', currentSearch = '', nextId = 100;
+
+function setSyncStatus(state, msg) {
+  document.getElementById('sync-dot').className = 'sync-dot ' + (state === 'ok' ? '' : state);
+  document.getElementById('sync-status').textContent = msg;
+}
+
+function showError(msg) {
+  const b = document.getElementById('error-bar');
+  b.textContent = msg;
+  b.style.display = 'block';
+  setTimeout(() => b.style.display = 'none', 5000);
+}
+
+function getStatus(qty) {
+  const n = Number(qty);
+  if (n <= 0) return 'out';
+  if (n <= 2) return 'low';
+  return 'ok';
+}
+
+function getBadge(s) {
+  return s === 'out' ? 'Rupture' : s === 'low' ? 'Stock faible' : 'En stock';
+}
+
+async function fetchData() {
+  setSyncStatus('syncing', 'Synchronisation...');
+  try {
+    const res = await fetch(SCRIPT_URL + '?t=' + Date.now());
+    const raw = await res.json();
+    if (!raw || raw.length < 2) { setSyncStatus('error', 'Sheet vide'); return; }
+    items = []; plaques = {};
+    let maxId = 99;
+    for (let i = 1; i < raw.length; i++) {
+      const [id, name, cat, qty, unit, note] = raw[i];
+      if (!id && !name) continue;
+      if (String(id).startsWith('PLAQUE_')) {
+        plaques[String(id).replace('PLAQUE_', '')] = { qty: Number(qty), rowIndex: i + 1 };
+      } else {
+        items.push({ id, name, cat, qty: Number(qty), unit, note: note || '', rowIndex: i + 1 });
+        if (Number(id) > maxId) maxId = Number(id);
+      }
+    }
+    PLAQUES_SIZES.forEach(s => { if (!plaques[s]) plaques[s] = { qty: 0, rowIndex: null }; });
+    nextId = maxId + 1;
+    render();
+    setSyncStatus('ok', 'Synchronisé · ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+  } catch(e) {
+    setSyncStatus('error', 'Hors ligne');
+    showError('Impossible de joindre Google Sheets.');
+  }
+}
+
+async function postData(payload) {
+  await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+}
+
+async function updateRow(rowIndex, col, value) {
+  setSyncStatus('syncing', 'Sauvegarde...');
+  try {
+    await postData({ action: 'update', row: rowIndex, col, value });
+    setSyncStatus('ok', 'Sauvegardé · ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+  } catch(e) {
+    setSyncStatus('error', 'Erreur sauvegarde');
+    showError('La modification n\'a pas pu être sauvegardée.');
+  }
+}
+
+async function changeQty(id, delta) {
+  const item = items.find(i => i.id == id);
+  if (!item) return;
+  item.qty = Math.max(0, item.qty + delta);
+  render();
+  await updateRow(item.rowIndex, 4, item.qty);
+}
+
+async function changePlaque(size, delta) {
+  if (!plaques[size]) plaques[size] = { qty: 0, rowIndex: null };
+  plaques[size].qty = Math.max(0, plaques[size].qty + delta);
+  renderPlaques();
+  if (plaques[size].rowIndex) await updateRow(plaques[size].rowIndex, 4, plaques[size].qty);
+}
+
+async function updateNote(id, val) {
+  const item = items.find(i => i.id == id);
+  if (!item) return;
+  item.note = val;
+  await updateRow(item.rowIndex, 6, val);
+}
+
+async function addItem() {
+  const name = document.getElementById('new-name').value.trim();
+  const unit = document.getElementById('new-unit').value.trim() || 'pcs';
+  const qty = parseInt(document.getElementById('new-qty').value) || 0;
+  const cat = document.getElementById('new-cat').value;
+  if (!name) return;
+  setSyncStatus('syncing', 'Ajout...');
+  try {
+    await postData({ action: 'addRow', row: [nextId++, name, cat, qty, unit, ''] });
+    document.getElementById('new-name').value = '';
+    document.getElementById('new-unit').value = '';
+    document.getElementById('new-qty').value = '';
+    toggleAdd();
+    await fetchData();
+  } catch(e) {
+    showError('Impossible d\'ajouter le produit.');
+    setSyncStatus('error', 'Erreur');
+  }
+}
+
+function updateStats() {
+  document.getElementById('s-total').textContent = items.length;
+  document.getElementById('s-ok').textContent = items.filter(i => getStatus(i.qty) === 'ok').length;
+  document.getElementById('s-low').textContent = items.filter(i => getStatus(i.qty) === 'low').length;
+  document.getElementById('s-out').textContent = items.filter(i => getStatus(i.qty) === 'out').length;
+}
+
+function renderPlaques() {
+  const grid = document.getElementById('plaques-grid');
+  grid.innerHTML = '';
+  PLAQUES_SIZES.forEach(size => {
+    const data = plaques[size] || { qty: 0 };
+    const s = getStatus(data.qty);
+    const d = document.createElement('div');
+    d.className = 'plaque ' + s;
+    d.innerHTML = `<div class="plaque-size">${size}</div><div class="plaque-ctrl"><button class="ctrl-btn" onclick="changePlaque('${size}',-1)">-</button><span class="ctrl-val">${data.qty}</span><button class="ctrl-btn" onclick="changePlaque('${size}',1)">+</button></div><span class="badge ${s}">${getBadge(s)}</span>`;
+    grid.appendChild(d);
+  });
+}
+
+function renderItems() {
+  const grid = document.getElementById('items-grid');
+  let filtered = items;
+  if (currentSearch) filtered = filtered.filter(i => i.name.toLowerCase().includes(currentSearch.toLowerCase()));
+  if (currentFilter !== 'all') {
+    if (['ok','low','out'].includes(currentFilter)) filtered = filtered.filter(i => getStatus(i.qty) === currentFilter);
+    else filtered = filtered.filter(i => i.cat === currentFilter);
+  }
+  grid.innerHTML = '';
+  if (!filtered.length) { grid.innerHTML = '<div class="empty">Aucun produit trouvé.</div>'; return; }
+  filtered.forEach(item => {
+    const s = getStatus(item.qty);
+    const c = document.createElement('div');
+    c.className = 'card ' + s;
+    c.innerHTML = `<div class="card-top"><div class="card-name">${item.name}</div><span class="card-cat">${item.cat}</span></div><div class="card-ctrl"><button class="qty-btn" onclick="changeQty('${item.id}',-1)">-</button><span class="qty-val">${item.qty}</span><button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button><span class="unit-label">${item.unit}</span><span class="badge ${s}">${getBadge(s)}</span></div><div class="card-note"><input class="note-input" placeholder="Note..." value="${item.note||''}" onchange="updateNote('${item.id}',this.value)" /><button class="del-btn" onclick="deleteItem('${item.id}')">Suppr.</button></div>`;
+    grid.appendChild(c);
+  });
+}
+
+function render() { updateStats(); renderPlaques(); renderItems(); }
+function setFilter(f, btn) { currentFilter = f; document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderItems(); }
+function setSearch(v) { currentSearch = v; renderItems(); }
+function toggleAdd() { const w = document.getElementById('add-form-wrap'); w.style.display = w.style.display === 'none' ? 'block' : 'none'; }
+
+async function deleteItem(id) {
+  if (!confirm('Supprimer ce produit ?')) return;
+  items = items.filter(i => i.id != id);
+  render();
+  await fetchData();
+}
+
+fetchData();
+setInterval(fetchData, 30000);
+</script>
+</body>
+</html>
